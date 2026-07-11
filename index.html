@@ -9,12 +9,12 @@
   </head>
   <body>
     <div class="page-shell">
-      <section id="loginSection" class="auth-card">
+      <section id="loginSection" class="auth-card hidden">
         <div class="brand-block">
-          <p class="eyebrow">Login Required</p>
+          <p class="eyebrow">Manage Vehicles</p>
           <h1>Nakshatra I Land</h1>
           <h2>Vehicle Directory</h2>
-          <p>Sign in with your mobile number to access the vehicle directory.</p>
+          <p>Optional phone login is available for auditing. Vehicle add/edit works for any user with the link.</p>
         </div>
 
         <div class="auth-form">
@@ -43,7 +43,7 @@
         </div>
       </section>
 
-      <main id="app" class="app hidden" aria-live="polite">
+      <main id="app" class="app" aria-live="polite">
         <header class="topbar site-header">
           <div class="site-brand">
             <img src="BLISS%20TECH7.png" alt="BlissTech7" class="site-logo" />
@@ -58,6 +58,7 @@
           <div class="topbar-actions">
             <span id="userBadge" class="user-badge"></span>
             <button id="addVehicleBtn" class="primary-btn header-add-btn" type="button" onclick="window.openVehicleModal()">Add Vehicle</button>
+            <button id="debugFirebaseBtn" class="secondary-btn" type="button" onclick="window.showFirebaseDebug && window.showFirebaseDebug()">Debug Firebase</button>
             <button id="logoutBtn" class="secondary-btn hidden">Logout</button>
           </div>
         </header>

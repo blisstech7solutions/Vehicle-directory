@@ -5,18 +5,20 @@ function normalizeText(value) {
 }
 
 function ensureFirebaseReady() {
-  if (!auth || !db) {
-    throw new Error("Firebase is not configured correctly. Please update firebase-config.js with the correct project credentials from Firebase Console.");
+  if (!db) {
+    throw new Error("Firestore is not configured correctly. Please update firebase-config.js with the correct project credentials from Firebase Console.");
   }
 }
 
 async function loginAdmin(email, password) {
   ensureFirebaseReady();
+  if (!auth) throw new Error('Firebase Auth is not available.');
   return auth.signInWithEmailAndPassword(email, password);
 }
 
 function logoutAdmin() {
   ensureFirebaseReady();
+  if (!auth) throw new Error('Firebase Auth is not available.');
   return auth.signOut();
 }
 

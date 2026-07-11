@@ -1,6 +1,6 @@
 const state = {
   user: null,
-  vehicles: readStoredVehicles(),
+  vehicles: [],
   searchTerm: "",
   editingVehicleId: null,
   deletingVehicleId: null,
@@ -18,23 +18,19 @@ function readStoredVehicles() {
 }
 
 function persistStoredVehicles(vehicles) {
-  localStorage.setItem("nakshatraVehicles", JSON.stringify(vehicles));
+  // Disabled: app now relies solely on Firestore for persistence.
 }
 
 function createLocalVehicleId() {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function normalizeText(value) {
-  return (value || "").toString().toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 const loginSection = document.getElementById("loginSection");
 const appSection = document.getElementById("app");
+const loginPanel = document.getElementById("loginPanel");
+const adminLoginBtn = document.getElementById("adminLoginBtn");
 const phoneForm = document.getElementById("phoneForm");
 const otpForm = document.getElementById("otpForm");
-const adminLoginBtn = document.getElementById("adminLoginBtn");
-const loginPanel = document.getElementById("loginPanel");
 const phoneNumberInput = document.getElementById("phoneNumber");
 const otpCodeInput = document.getElementById("otpCode");
 const authMessage = document.getElementById("authMessage");
@@ -210,17 +206,18 @@ async function loadVehicles() {
   try {
     const vehicles = await getVehicles();
     state.vehicles = vehicles;
-    persistStoredVehicles(vehicles);
     renderVehicles();
+    // ensure management controls enabled when Firestore responds
+    addVehicleBtn.disabled = false;
+    addVehicleBtn.classList.remove('hidden');
   } catch (error) {
-    const storedVehicles = readStoredVehicles();
-    state.vehicles = storedVehicles;
-    if (storedVehicles.length) {
-      setMessage(authMessage, "Firestore access is restricted. Showing locally saved data.");
-    } else {
-      setMessage(authMessage, "Firestore access is restricted. Add a vehicle to create local data.");
-    }
+    console.error('getVehicles error:', error);
+    // Show clear error and do not fall back to local storage; keep management controls visible.
+    state.vehicles = [];
     renderVehicles();
+    setMessage(authMessage, `Cannot load vehicles from Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
+    addVehicleBtn.disabled = false;
+    addVehicleBtn.classList.remove('hidden');
   }
 }
 
@@ -271,15 +268,8 @@ async function handleVehicleSubmit(event) {
     closeVehicleModal();
     setMessage(authMessage, state.editingVehicleId ? "Vehicle updated successfully." : "Vehicle added successfully.");
   } catch (error) {
-    const fallbackVehicles = state.editingVehicleId
-      ? state.vehicles.map((item) => (item.id === state.editingVehicleId ? { ...item, ...payload, id: state.editingVehicleId } : item))
-      : [...state.vehicles, { id: createLocalVehicleId(), ...payload }];
-
-    state.vehicles = fallbackVehicles;
-    persistStoredVehicles(fallbackVehicles);
-    renderVehicles();
-    closeVehicleModal();
-    setMessage(formMessage, "Saved locally because Firestore access is restricted.");
+    console.error('add/update vehicle error:', error);
+    setMessage(formMessage, `Unable to save vehicle to Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
   }
 }
 
@@ -291,12 +281,8 @@ async function handleDeleteConfirm() {
     await loadVehicles();
     closeDeleteModal();
   } catch (error) {
-    const nextVehicles = state.vehicles.filter((item) => item.id !== state.deletingVehicleId);
-    state.vehicles = nextVehicles;
-    persistStoredVehicles(nextVehicles);
-    renderVehicles();
-    closeDeleteModal();
-    setMessage(authMessage, "Deleted locally because Firestore access is restricted.");
+    console.error('delete vehicle error:', error);
+    setMessage(authMessage, `Unable to delete vehicle from Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
   }
 }
 
@@ -470,40 +456,47 @@ function bindEvents() {
     if (!vehicle) return;
 
     if (action === "edit") {
-      if (!state.user) {
-        setMessage(authMessage, "Only admin can edit vehicles.", true);
-        return;
-      }
       openVehicleModal(vehicle);
     }
 
     if (action === "delete") {
-      if (!state.user) {
-        setMessage(authMessage, "Only admin can delete vehicles.", true);
-        return;
-      }
       openDeleteModal(vehicle);
     }
   });
 }
 
-if (!auth || window.firebaseInitStatus === "error") {
-  showAuthView(false);
-  setMessage(authMessage, "Firebase configuration is invalid. Please update firebase-config.js with the correct project values from Firebase Console.", true);
-} else {
+// Show the app immediately and attempt Firestore load. Auth is optional for unauthenticated rules.
+showAuthView(true);
+
+if (auth && auth.onAuthStateChanged) {
   auth.onAuthStateChanged((user) => {
     state.user = user;
-    if (user) {
-      userBadge.textContent = user.phoneNumber || "User";
-      showAuthView(true);
-      loadVehicles();
-    } else {
-      userBadge.textContent = "";
-      showAuthView(false);
-      state.vehicles = readStoredVehicles();
-      renderVehicles();
-    }
+    userBadge.textContent = user ? user.phoneNumber || "User" : "";
   });
 }
 
+loadVehicles();
+
 document.addEventListener("DOMContentLoaded", bindEvents);
+
+// Debug helper to inspect Firebase state and try a live fetch
+window.showFirebaseDebug = async function () {
+  const info = {
+    firebaseInitStatus: window.firebaseInitStatus || null,
+    firebaseInitError: window.firebaseInitError ? (window.firebaseInitError.message || String(window.firebaseInitError)) : null,
+    hasDb: !!window.firebaseDb,
+    hasAuth: !!window.firebaseAuth
+  };
+
+  try {
+    if (window.firebaseDb && typeof getVehicles === 'function') {
+      const vehicles = await getVehicles();
+      info.sampleVehicles = vehicles.slice(0,3);
+    }
+  } catch (err) {
+    info.fetchError = err && err.message ? err.message : String(err);
+  }
+
+  alert(JSON.stringify(info, null, 2));
+  console.log('Firebase debug', info);
+}
