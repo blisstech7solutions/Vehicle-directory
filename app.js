@@ -34,7 +34,6 @@ const otpForm = document.getElementById("otpForm");
 const phoneNumberInput = document.getElementById("phoneNumber");
 const otpCodeInput = document.getElementById("otpCode");
 const authMessage = document.getElementById("authMessage");
-const logoutBtn = document.getElementById("logoutBtn");
 const userBadge = document.getElementById("userBadge");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
@@ -70,7 +69,6 @@ function showAuthView(isLoggedIn) {
   loginSection.classList.toggle("hidden", true);
   appSection.classList.toggle("hidden", false);
   addVehicleBtn.classList.remove("hidden");
-  logoutBtn.classList.toggle("hidden", !isLoggedIn);
 }
 
 const toastEl = document.getElementById("toast");
@@ -220,10 +218,10 @@ function renderVehicles() {
           <div class="vehicle-meta">
             <span class="badge">${vehicleType}</span>
           </div>
-          <div class="card-actions">
-            <a class="primary-btn" href="tel:${vehicle.mobile || ""}">Call</a>
-            ${canManage ? `<button class="secondary-btn" type="button" onclick="window.handleVehicleAction('${vehicle.id}', 'edit')">Edit</button>` : ""}
-            ${canManage ? `<button class="danger-btn" type="button" onclick="window.handleVehicleAction('${vehicle.id}', 'delete')">Delete</button>` : ""}
+          <div class="card-actions icon-row">
+            <a class="action-icon-btn" href="tel:${vehicle.mobile || ""}" title="Call"><span aria-hidden="true">📞</span><span class="sr-only">Call</span></a>
+            ${canManage ? `<button class="action-icon-btn" type="button" title="Edit" onclick="window.handleVehicleAction('${vehicle.id}', 'edit')"><span aria-hidden="true">✏️</span><span class="sr-only">Edit</span></button>` : ""}
+            ${canManage ? `<button class="action-icon-btn" type="button" title="Delete" onclick="window.handleVehicleAction('${vehicle.id}', 'delete')"><span aria-hidden="true">🗑️</span><span class="sr-only">Delete</span></button>` : ""}
           </div>
         </article>
       `;
@@ -396,18 +394,6 @@ async function handleVerifyOtp(event) {
   }
 }
 
-async function handleLogout() {
-  try {
-    if (!auth) {
-      setMessage(authMessage, "Firebase is not configured correctly.", true);
-      return;
-    }
-    await logoutAdmin();
-  } catch (error) {
-    setMessage(authMessage, error.message || "Logout failed.", true);
-  }
-}
-
 function findParkingOwner() {
   const lookupValue = parkingLookupInput.value.trim();
   if (!lookupValue) {
@@ -495,54 +481,6 @@ function openWhatsAppMessage() {
   window.location.href = targetUrl;
 }
 
-async function handleBulkImport(event) {
-  event.preventDefault();
-  const rows = parseBulkInput(bulkTextarea.value);
-
-  if (!rows.length) {
-    setMessage(bulkMessage, "Paste at least one valid row in the bulk import box.", true);
-    return;
-  }
-
-  showLoader(true);
-  let imported = 0;
-  let errors = 0;
-
-  for (const row of rows) {
-    const payload = {
-      vehicleNumber: formatVehicleNumber(row.vehicleNumber),
-      ownerName: row.ownerName,
-      flatNumber: formatFlatNumber(row.flatNumber),
-      mobile: row.mobile,
-      vehicleType: "4 Wheeler"
-    };
-
-    if (!payload.vehicleNumber || !payload.ownerName || !payload.flatNumber || !payload.mobile) {
-      errors += 1;
-      continue;
-    }
-
-    try {
-      await addVehicle(payload);
-      imported += 1;
-    } catch (error) {
-      console.error('bulk import row error:', row, error);
-      errors += 1;
-    }
-  }
-
-  showLoader(false);
-  await loadVehicles();
-
-  const summary = `Imported ${imported} vehicles${errors ? `, ${errors} failed` : ''}.`;
-  setMessage(bulkMessage, summary, errors > 0);
-  showToast(summary, errors > 0);
-
-  if (imported > 0) {
-    closeBulkModal();
-  }
-}
-
 function bindEvents() {
   adminLoginBtn.addEventListener("click", () => {
     loginPanel.classList.toggle("hidden");
@@ -550,7 +488,6 @@ function bindEvents() {
   });
   phoneForm.addEventListener("submit", handleSendOtp);
   otpForm.addEventListener("submit", handleVerifyOtp);
-  logoutBtn.addEventListener("click", handleLogout);
   searchBtn.addEventListener("click", () => {
     state.searchTerm = searchInput.value;
     renderVehicles();
