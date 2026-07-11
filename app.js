@@ -113,20 +113,15 @@ function formatVehicleNumber(value) {
 }
 
 function formatFlatNumber(value) {
-  const trimmed = value.trim();
+  const trimmed = String(value || "").trim();
   if (!trimmed) return "";
 
-  const sanitized = trimmed.replace(/[^a-z0-9]+/gi, "");
-  if (!sanitized) return "";
-
-  const digits = sanitized.match(/\d+/);
-  const hasLetterE = /e/i.test(sanitized);
-
-  if (hasLetterE || digits) {
-    const numberPart = digits ? digits[0] : "";
-    return numberPart ? `E-${numberPart}` : "E";
+  const digits = trimmed.match(/\d+/);
+  if (digits) {
+    return `E-${digits[0]}`;
   }
 
+  const sanitized = trimmed.replace(/[^A-Z0-9]+/gi, "").toUpperCase();
   return sanitized;
 }
 
@@ -197,7 +192,7 @@ function getFilteredVehicles() {
 }
 
 function renderVehicles() {
-  const filtered = getFilteredVehicles();
+  const filtered = getFilteredVehicles().sort(sortByFlatNumber);
   resultsCount.textContent = `${filtered.length} vehicle${filtered.length === 1 ? "" : "s"}`;
 
   if (!filtered.length) {
@@ -227,6 +222,16 @@ function renderVehicles() {
       `;
     })
     .join("");
+}
+
+function sortByFlatNumber(a, b) {
+  const normalize = (value) => {
+    if (!value) return 0;
+    const match = String(value).match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
+  };
+
+  return normalize(a.flatNumber) - normalize(b.flatNumber);
 }
 
 async function loadVehicles() {
