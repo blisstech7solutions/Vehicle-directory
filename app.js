@@ -109,7 +109,25 @@ function scrollToParkingFeature() {
 }
 
 function formatVehicleNumber(value) {
-  return value.trim().replace(/\s+/g, " ");
+  const raw = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!raw) return "";
+
+  const bhMatch = raw.match(/^(BH)(\d{1,2})([A-Z]{1,2})(\d{1,4})$/);
+  if (bhMatch) {
+    return `${bhMatch[1]} ${bhMatch[2]} ${bhMatch[3]} ${bhMatch[4]}`;
+  }
+
+  const standardMatch = raw.match(/^([A-Z]{2})(\d{1,2})([A-Z]{1,2})(\d{1,4})$/);
+  if (standardMatch) {
+    return `${standardMatch[1]} ${standardMatch[2]} ${standardMatch[3]} ${standardMatch[4]}`;
+  }
+
+  const altMatch = raw.match(/^(\d{2})([A-Z]{2})(\d{1,4})([A-Z]?)$/);
+  if (altMatch) {
+    return `${altMatch[1]} ${altMatch[2]} ${altMatch[3]}${altMatch[4] ? ` ${altMatch[4]}` : ""}`;
+  }
+
+  return raw.replace(/([A-Z]{2})(\d{1,2})([A-Z]{1,2})(\d{1,4})/, "$1 $2 $3 $4");
 }
 
 function formatFlatNumber(value) {
