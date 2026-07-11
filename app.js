@@ -204,8 +204,7 @@ function getFilteredVehicles() {
   if (!query) return state.vehicles;
 
   return state.vehicles.filter((vehicle) => {
-    const fields = [vehicle.vehicleNumber, vehicle.flatNumber, vehicle.ownerName, vehicle.mobile];
-    return fields.some((field) => normalizeText(field).includes(query));
+    return normalizeText(vehicle.flatNumber || "").includes(query);
   });
 }
 
@@ -426,7 +425,7 @@ function findParkingOwner() {
 
   const normalizedLookup = normalizeText(lookupValue);
   const matchedVehicle = state.vehicles.find((vehicle) => {
-    const candidates = [vehicle.flatNumber, vehicle.vehicleNumber, vehicle.mobile];
+    const candidates = [vehicle.flatNumber];
     return candidates.some((candidate) => {
       const normalizedCandidate = normalizeText(candidate);
       return normalizedCandidate.includes(normalizedLookup) || normalizedLookup.includes(normalizedCandidate);
@@ -452,8 +451,7 @@ function generateParkingMessage() {
   const parkingPlace = parkingPlaceInput.value.trim() || state.lastMatchedVehicle?.flatNumber || "your parking";
   const duration = durationInput.value.trim() || "10 min";
 
-  return `Hi ${ownerName}, I have parked my vehicle in ${parkingPlace} for ${duration}. If you need your parking, you can contact me directly.`;
-}
+return `Hello ${ownerName}, I have temporarily parked my vehicle in your parking space (${parkingPlace}) for approximately ${duration}. If you require access to your parking, please call or message me, and I will move my vehicle immediately. I sincerely apologize for the inconvenience and appreciate your understanding. Thank you!`;}
 
 async function copyParkingMessage() {
   const message = generateParkingMessage();
@@ -465,45 +463,86 @@ async function copyParkingMessage() {
   }
 }
 
+// function normalizeWhatsAppNumber(value) {
+//   const raw = String(value || "");
+//   const tokens = raw.split(/[,;\/\s]+/).filter(Boolean);
+
+//   for (const token of tokens) {
+//     const digits = token.replace(/\D/g, "");
+
+//     if (digits.length === 10) {
+//       return `91${digits}`;
+//     }
+//     if (digits.length === 11 && digits.startsWith("0")) {
+//       return `91${digits.slice(1)}`;
+//     }
+//     if (digits.length === 12 && digits.startsWith("91")) {
+//       return digits;
+//     }
+//     if (digits.length === 13 && digits.startsWith("091")) {
+//       return digits.slice(1);
+//     }
+//   }
+
+//   return "";
+// }
 function normalizeWhatsAppNumber(value) {
-  const raw = String(value || "");
-  const tokens = raw.split(/[,;\/\s]+/).filter(Boolean);
+    if (!value) return "";
 
-  for (const token of tokens) {
-    const digits = token.replace(/\D/g, "");
+    // Keep only digits
+    let number = String(value).replace(/\D/g, "");
 
-    if (digits.length === 10) {
-      return `91${digits}`;
+    // Remove leading zero
+    if (number.startsWith("0")) {
+        number = number.substring(1);
     }
-    if (digits.length === 11 && digits.startsWith("0")) {
-      return `91${digits.slice(1)}`;
-    }
-    if (digits.length === 12 && digits.startsWith("91")) {
-      return digits;
-    }
-    if (digits.length === 13 && digits.startsWith("091")) {
-      return digits.slice(1);
-    }
-  }
 
-  return "";
+    // Add India code if only 10 digits
+    if (number.length === 10) {
+        number = "91" + number;
+    }
+
+    // Validate
+    if (number.length !== 12 || !number.startsWith("91")) {
+        return "";
+    }
+
+    return number;
 }
+// function openWhatsAppMessage() {
+//   const message = generateParkingMessage();
+//   const encoded = encodeURIComponent(message);
+//   const ownerPhone = normalizeWhatsAppNumber(state.lastMatchedVehicle?.mobile || "");
 
+//   if (!ownerPhone) {
+//     setMessage(authMessage, "No valid phone number found for WhatsApp.", true);
+//     showToast("No valid WhatsApp number available.", true);
+//     return;
+//   }
+
+//   const targetUrl = `https://wa.me/${ownerPhone}?text=${encoded}`;
+//   window.location.href = targetUrl;
+// }
 function openWhatsAppMessage() {
-  const message = generateParkingMessage();
-  const encoded = encodeURIComponent(message);
-  const ownerPhone = normalizeWhatsAppNumber(state.lastMatchedVehicle?.mobile || "");
+    if (!state.lastMatchedVehicle) {
+        showToast("Please find the owner first.", true);
+        return;
+    }
 
-  if (!ownerPhone) {
-    setMessage(authMessage, "No valid phone number found for WhatsApp.", true);
-    showToast("No valid WhatsApp number available.", true);
-    return;
-  }
+    const phone = normalizeWhatsAppNumber(state.lastMatchedVehicle.mobile);
 
-  const targetUrl = `https://wa.me/${ownerPhone}?text=${encoded}`;
-  window.location.href = targetUrl;
+    if (!phone) {
+        showToast("Invalid mobile number.", true);
+        return;
+    }
+
+    const message = encodeURIComponent(generateParkingMessage());
+
+    window.open(
+        `https://wa.me/${phone}?text=${message}`,
+        "_blank"
+    );
 }
-
 function bindEvents() {
   adminLoginBtn.addEventListener("click", () => {
     loginPanel.classList.toggle("hidden");
