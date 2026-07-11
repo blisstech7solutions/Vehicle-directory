@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nakshatra iLand - Vehicle Directory</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e6cf2'/%3E%3Cpath d='M20 44V24h8v20m8 0V18h8v26' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <section id="loginSection" class="auth-card">
+        <div class="brand-block">
+          <p class="eyebrow">Login Required</p>
+          <h1>Nakshatra I Land</h1>
+          <h2>Vehicle Directory</h2>
+          <p>Sign in with your mobile number to access the vehicle directory.</p>
+        </div>
+
+        <div class="auth-form">
+          <button id="adminLoginBtn" class="primary-btn">Admin Login</button>
+          <p class="hint">Use this only for managing vehicle records.</p>
+          <div id="loginPanel" class="auth-form-inline hidden">
+            <form id="phoneForm" class="auth-form-inline">
+              <label for="phoneNumber">Mobile Number</label>
+              <input id="phoneNumber" name="phoneNumber" type="tel" placeholder="+919876543210" required />
+
+              <button type="submit" class="primary-btn">Send OTP</button>
+            </form>
+
+            <form id="otpForm" class="auth-form-inline hidden">
+              <label for="otpCode">OTP Code</label>
+              <input id="otpCode" name="otpCode" type="text" placeholder="Enter 6-digit OTP" required />
+
+              <button type="submit" class="secondary-btn">Verify OTP</button>
+            </form>
+
+            <div id="recaptcha-container"></div>
+            <p class="hint">New users will be signed up automatically after OTP verification.</p>
+            <p class="hint">If you do not receive the SMS, please wait a moment and try again.</p>
+          </div>
+          <p id="authMessage" class="message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <main id="app" class="app hidden" aria-live="polite">
+        <header class="topbar site-header">
+          <div class="site-brand">
+            <img src="BLISS%20TECH7.png" alt="BlissTech7" class="site-logo" />
+            <div class="brand-text">
+                <h1>Nakshatra iLand - Vehicle Directory</h1>
+              <p class="eyebrow">E Wing</p>
+              
+              <p class="header-address">Old Alandi-Moshi Road, Moshi, Pune, Maharashtra 412105</p>
+            </div>
+          </div>
+
+          <div class="topbar-actions">
+            <span id="userBadge" class="user-badge"></span>
+            <button id="addVehicleBtn" class="primary-btn header-add-btn" type="button" onclick="window.openVehicleModal()">Add Vehicle</button>
+            <button id="logoutBtn" class="secondary-btn hidden">Logout</button>
+          </div>
+        </header>
+
+        <section class="search-panel">
+          <div class="search-box">
+            <h2>Search Vehicle</h2>
+            <label class="sr-only" for="searchInput">Search by vehicle number</label>
+            <div class="search-row">
+              <input id="searchInput" type="text" placeholder="Search by vehicle number" />
+              <button id="searchBtn" class="primary-btn">Search</button>
+            </div>
+            <p class="hint">Search works for formats like MH14AB1234, MH-14-AB-1234, and mh14ab1234.</p>
+          </div>
+
+          <!-- add button moved to header for compact layout -->
+        </section>
+
+        <section class="results-panel">
+          <div class="results-header">
+            <h3>Results</h3>
+            <span id="resultsCount" class="results-count">0 vehicles</span>
+          </div>
+          <div id="vehiclesList" class="vehicle-list"></div>
+        </section>
+
+        <section class="search-panel">
+          <div class="search-box">
+            <h2>Temporary Parking Message</h2>
+            <p class="hint">Quickly send a WhatsApp message when a vehicle is parked somewhere temporarily.</p>
+            <div class="parking-form">
+              <input id="parkingLookupInput" type="text" placeholder="Search by flat number or parking number" />
+              <button id="findOwnerBtn" class="secondary-btn">Find Owner</button>
+              <input id="ownerNameInputMsg" type="text" placeholder="Owner name" />
+              <input id="parkingPlaceInput" type="text" placeholder="Parking place (optional)" />
+              <input id="durationInput" type="text" placeholder="For 10 min / 1 day" />
+              <button id="whatsappMessageBtn" class="primary-btn">Send Message</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="vehicleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Add Vehicle</h3>
+          <button id="closeModalBtn" class="icon-btn" aria-label="Close">×</button>
+        </div>
+
+        <form id="vehicleForm" class="modal-form">
+          <input id="vehicleIdField" type="hidden" />
+
+          <label for="vehicleNumber">Vehicle Number *</label>
+          <input id="vehicleNumber" name="vehicleNumber" type="text" placeholder="MH 24 BL 9159" required />
+
+          <label for="ownerName">Owner Name *</label>
+          <input id="ownerName" name="ownerName" type="text" required />
+
+          <label for="flatNumber">Flat Number *</label>
+          <input id="flatNumber" name="flatNumber" type="text" placeholder="E-302 or E 302" required />
+
+          <label for="mobile">Mobile Number *</label>
+          <input id="mobile" name="mobile" type="tel" required />
+
+          <label for="vehicleType">Vehicle Type</label>
+          <div class="radio-group">
+            <label><input type="radio" name="vehicleType" value="2 Wheeler" /> 2 Wheeler</label>
+            <label><input type="radio" name="vehicleType" value="4 Wheeler" checked /> 4 Wheeler</label>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" id="cancelModalBtn" class="secondary-btn">Cancel</button>
+            <button type="submit" class="primary-btn">Save</button>
+          </div>
+          <p id="formMessage" class="message" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="deleteModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <div class="modal-card confirmation-card">
+        <h3 id="deleteTitle">Delete Vehicle?</h3>
+        <p id="deleteVehicleLabel" class="confirmation-text"></p>
+        <div class="modal-actions">
+          <button id="cancelDeleteBtn" class="secondary-btn">Cancel</button>
+          <button id="confirmDeleteBtn" class="danger-btn">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase.js"></script>
+    <script src="app.js"></script>
+    <footer class="site-footer one-liner">
+      <div class="footer-inner">
+        <img src="BLISS%20TECH7.png" alt="BlissTech7" class="footer-logo-small" />
+        <div class="managed">Managed by <strong>Vaibhav Malbhage</strong> • <a href="tel:7709848293">7709848293</a></div>
+      </div>
+    </footer>
+  </body>
+</html>
