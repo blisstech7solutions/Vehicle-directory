@@ -201,10 +201,15 @@ function closeDeleteModal() {
 
 function getFilteredVehicles() {
   const query = normalizeText(state.searchTerm);
+
   if (!query) return state.vehicles;
 
   return state.vehicles.filter((vehicle) => {
-    return normalizeText(vehicle.flatNumber || "").includes(query);
+    return (
+      normalizeText(vehicle.flatNumber || "").includes(query) ||
+      normalizeText(vehicle.ownerName || "").includes(query) ||
+      normalizeText(vehicle.vehicleNumber || "").includes(query)
+    );
   });
 }
 
@@ -424,13 +429,9 @@ function findParkingOwner() {
   }
 
   const normalizedLookup = normalizeText(lookupValue);
-  const matchedVehicle = state.vehicles.find((vehicle) => {
-    const candidates = [vehicle.flatNumber];
-    return candidates.some((candidate) => {
-      const normalizedCandidate = normalizeText(candidate);
-      return normalizedCandidate.includes(normalizedLookup) || normalizedLookup.includes(normalizedCandidate);
-    });
-  });
+const matchedVehicle = state.vehicles.find((vehicle) => {
+    return normalizeText(vehicle.flatNumber || "").includes(normalizedLookup);
+});
 
   if (!matchedVehicle) {
     state.lastMatchedVehicle = null;
