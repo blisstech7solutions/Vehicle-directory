@@ -39,6 +39,7 @@ const userBadge = document.getElementById("userBadge");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const addVehicleBtn = document.getElementById("addVehicleBtn");
+const parkingShortcutBtn = document.getElementById("parkingShortcutBtn");
 const vehiclesList = document.getElementById("vehiclesList");
 const resultsCount = document.getElementById("resultsCount");
 
@@ -72,9 +73,27 @@ function showAuthView(isLoggedIn) {
   logoutBtn.classList.toggle("hidden", !isLoggedIn);
 }
 
+const toastEl = document.getElementById("toast");
+const loaderOverlay = document.getElementById("loaderOverlay");
+
 function setMessage(element, message, isError = false) {
   element.textContent = message;
   element.style.color = isError ? "#e23d3d" : "#1353b0";
+}
+
+function showToast(message, isError = false) {
+  if (!toastEl) return;
+  toastEl.textContent = message;
+  toastEl.className = `toast visible${isError ? ' error' : ''}`;
+  window.clearTimeout(toastEl.hideTimer);
+  toastEl.hideTimer = window.setTimeout(() => {
+    toastEl.className = 'toast hidden';
+  }, 2800);
+}
+
+function showLoader(show = true) {
+  if (!loaderOverlay) return;
+  loaderOverlay.classList.toggle('hidden', !show);
 }
 
 function clearForm() {
@@ -82,6 +101,13 @@ function clearForm() {
   vehicleIdField.value = "";
   state.editingVehicleId = null;
   formMessage.textContent = "";
+}
+
+function scrollToParkingFeature() {
+  const parkingSection = document.getElementById("parkingSection");
+  if (parkingSection) {
+    parkingSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function formatVehicleNumber(value) {
@@ -166,7 +192,10 @@ function getFilteredVehicles() {
   const query = normalizeText(state.searchTerm);
   if (!query) return state.vehicles;
 
-  return state.vehicles.filter((vehicle) => normalizeText(vehicle.vehicleNumber).includes(query));
+  return state.vehicles.filter((vehicle) => {
+    const fields = [vehicle.vehicleNumber, vehicle.flatNumber, vehicle.ownerName, vehicle.mobile];
+    return fields.some((field) => normalizeText(field).includes(query));
+  });
 }
 
 function renderVehicles() {
@@ -203,21 +232,23 @@ function renderVehicles() {
 }
 
 async function loadVehicles() {
+  showLoader(true);
   try {
     const vehicles = await getVehicles();
     state.vehicles = vehicles;
     renderVehicles();
-    // ensure management controls enabled when Firestore responds
     addVehicleBtn.disabled = false;
     addVehicleBtn.classList.remove('hidden');
   } catch (error) {
     console.error('getVehicles error:', error);
-    // Show clear error and do not fall back to local storage; keep management controls visible.
     state.vehicles = [];
     renderVehicles();
     setMessage(authMessage, `Cannot load vehicles from Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
+    showToast('Unable to load vehicles. Check Firebase access.', true);
     addVehicleBtn.disabled = false;
     addVehicleBtn.classList.remove('hidden');
+  } finally {
+    showLoader(false);
   }
 }
 
@@ -256,12 +287,15 @@ async function handleVehicleSubmit(event) {
   };
 
   try {
+    showLoader(true);
     if (state.editingVehicleId) {
       await updateVehicle(state.editingVehicleId, payload);
       setMessage(formMessage, "Vehicle updated successfully.");
+      showToast('Vehicle updated successfully.');
     } else {
       await addVehicle(payload);
       setMessage(formMessage, "Vehicle added successfully.");
+      showToast('Vehicle added successfully.');
     }
 
     await loadVehicles();
@@ -269,7 +303,11 @@ async function handleVehicleSubmit(event) {
     setMessage(authMessage, state.editingVehicleId ? "Vehicle updated successfully." : "Vehicle added successfully.");
   } catch (error) {
     console.error('add/update vehicle error:', error);
-    setMessage(formMessage, `Unable to save vehicle to Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
+    const errorMessage = `Unable to save vehicle to Firestore: ${error && error.message ? error.message : 'unknown error'}`;
+    setMessage(formMessage, errorMessage, true);
+    showToast(errorMessage, true);
+  } finally {
+    showLoader(false);
   }
 }
 
@@ -277,12 +315,18 @@ async function handleDeleteConfirm() {
   if (!state.deletingVehicleId) return;
 
   try {
+    showLoader(true);
     await deleteVehicle(state.deletingVehicleId);
     await loadVehicles();
     closeDeleteModal();
+    showToast('Vehicle deleted successfully.');
   } catch (error) {
     console.error('delete vehicle error:', error);
-    setMessage(authMessage, `Unable to delete vehicle from Firestore: ${error && error.message ? error.message : 'unknown error'}`, true);
+    const errorMessage = `Unable to delete vehicle from Firestore: ${error && error.message ? error.message : 'unknown error'}`;
+    setMessage(authMessage, errorMessage, true);
+    showToast(errorMessage, true);
+  } finally {
+    showLoader(false);
   }
 }
 
@@ -412,12 +456,91 @@ async function copyParkingMessage() {
   }
 }
 
+function normalizeWhatsAppNumber(value) {
+  const raw = String(value || "");
+  const tokens = raw.split(/[,;\/\s]+/).filter(Boolean);
+
+  for (const token of tokens) {
+    const digits = token.replace(/\D/g, "");
+
+    if (digits.length === 10) {
+      return `91${digits}`;
+    }
+    if (digits.length === 11 && digits.startsWith("0")) {
+      return `91${digits.slice(1)}`;
+    }
+    if (digits.length === 12 && digits.startsWith("91")) {
+      return digits;
+    }
+    if (digits.length === 13 && digits.startsWith("091")) {
+      return digits.slice(1);
+    }
+  }
+
+  return "";
+}
+
 function openWhatsAppMessage() {
   const message = generateParkingMessage();
   const encoded = encodeURIComponent(message);
-  const ownerPhone = state.lastMatchedVehicle?.mobile;
-  const targetUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-  window.open(targetUrl, "_blank", "noopener,noreferrer");
+  const ownerPhone = normalizeWhatsAppNumber(state.lastMatchedVehicle?.mobile || "");
+
+  if (!ownerPhone) {
+    setMessage(authMessage, "No valid phone number found for WhatsApp.", true);
+    showToast("No valid WhatsApp number available.", true);
+    return;
+  }
+
+  const targetUrl = `https://wa.me/${ownerPhone}?text=${encoded}`;
+  window.location.href = targetUrl;
+}
+
+async function handleBulkImport(event) {
+  event.preventDefault();
+  const rows = parseBulkInput(bulkTextarea.value);
+
+  if (!rows.length) {
+    setMessage(bulkMessage, "Paste at least one valid row in the bulk import box.", true);
+    return;
+  }
+
+  showLoader(true);
+  let imported = 0;
+  let errors = 0;
+
+  for (const row of rows) {
+    const payload = {
+      vehicleNumber: formatVehicleNumber(row.vehicleNumber),
+      ownerName: row.ownerName,
+      flatNumber: formatFlatNumber(row.flatNumber),
+      mobile: row.mobile,
+      vehicleType: "4 Wheeler"
+    };
+
+    if (!payload.vehicleNumber || !payload.ownerName || !payload.flatNumber || !payload.mobile) {
+      errors += 1;
+      continue;
+    }
+
+    try {
+      await addVehicle(payload);
+      imported += 1;
+    } catch (error) {
+      console.error('bulk import row error:', row, error);
+      errors += 1;
+    }
+  }
+
+  showLoader(false);
+  await loadVehicles();
+
+  const summary = `Imported ${imported} vehicles${errors ? `, ${errors} failed` : ''}.`;
+  setMessage(bulkMessage, summary, errors > 0);
+  showToast(summary, errors > 0);
+
+  if (imported > 0) {
+    closeBulkModal();
+  }
 }
 
 function bindEvents() {
@@ -442,6 +565,7 @@ function bindEvents() {
   vehicleForm.addEventListener("submit", handleVehicleSubmit);
   cancelDeleteBtn.addEventListener("click", closeDeleteModal);
   confirmDeleteBtn.addEventListener("click", handleDeleteConfirm);
+  parkingShortcutBtn.addEventListener("click", scrollToParkingFeature);
   findOwnerBtn.addEventListener("click", findParkingOwner);
   whatsappMessageBtn.addEventListener("click", openWhatsAppMessage);
 

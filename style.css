@@ -384,6 +384,78 @@ input {
   margin: 4px 0 0;
 }
 
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 30, 56, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.loader-overlay .loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 16px 40px rgba(21, 48, 77, 0.16);
+}
+
+.loader-overlay .loader span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: loader-pulse 0.9s ease-in-out infinite;
+}
+
+.loader-overlay .loader span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.loader-overlay .loader span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes loader-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.6); opacity: 1; }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 78px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  background: rgba(21, 48, 77, 0.96);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 999px;
+  box-shadow: 0 18px 40px rgba(21, 48, 77, 0.2);
+  font-size: 0.95rem;
+  z-index: 210;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.toast.error {
+  background: rgba(226, 61, 61, 0.96);
+}
+
+.toast.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(0);
+}
+
 .confirmation-card {
   text-align: center;
 }
@@ -453,6 +525,26 @@ input {
   margin-top: 10px;
 }
 
+.bulk-textarea {
+  min-height: 200px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  width: 100%;
+  resize: vertical;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 @media (max-width: 900px) {
   .auth-card {
     grid-template-columns: 1fr;
@@ -460,6 +552,7 @@ input {
 
   .vehicle-list {
     grid-template-columns: 1fr;
+  }
 
   /* make action buttons full width in stacked layout */
   .search-panel { flex-direction: column; align-items: stretch }
@@ -469,9 +562,11 @@ input {
   .topbar { padding: 12px 16px 0 }
   .site-header .brand-text { display:none }
   .site-logo { width:44px; height:44px }
-  .topbar-actions { gap:8px }
+  .topbar-actions { gap:8px; flex-wrap: wrap; justify-content: flex-end; }
+  .topbar-actions button { min-width: 120px; flex: 1 1 auto; }
+  .card-actions { flex-direction: column; }
+  .card-actions button, .card-actions a { width: 100%; }
   .topbar-actions .vehicle-badge { display:none }
-  }
 }
 
 @media (max-width: 700px) {

@@ -58,7 +58,7 @@
           <div class="topbar-actions">
             <span id="userBadge" class="user-badge"></span>
             <button id="addVehicleBtn" class="primary-btn header-add-btn" type="button" onclick="window.openVehicleModal()">Add Vehicle</button>
-            <button id="debugFirebaseBtn" class="secondary-btn" type="button" onclick="window.showFirebaseDebug && window.showFirebaseDebug()">Debug Firebase</button>
+            <button id="parkingShortcutBtn" class="secondary-btn header-add-btn" type="button">Temporary Parking</button>
             <button id="logoutBtn" class="secondary-btn hidden">Logout</button>
           </div>
         </header>
@@ -85,7 +85,7 @@
           <div id="vehiclesList" class="vehicle-list"></div>
         </section>
 
-        <section class="search-panel">
+        <section id="parkingSection" class="search-panel">
           <div class="search-box">
             <h2>Temporary Parking Message</h2>
             <p class="hint">Quickly send a WhatsApp message when a vehicle is parked somewhere temporarily.</p>
@@ -100,6 +100,15 @@
           </div>
         </section>
       </main>
+
+      <div id="loaderOverlay" class="loader-overlay hidden" aria-hidden="true" role="status" aria-label="Loading">
+        <div class="loader" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     </div>
 
     <div id="vehicleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
